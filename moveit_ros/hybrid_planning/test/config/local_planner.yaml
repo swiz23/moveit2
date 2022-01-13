@@ -15,6 +15,15 @@ joint_states_topic: "/joint_states"
 
 # SimpleSampler param
 pass_through: false
+
+# Timestep used during TOTG time-parameterization of the incoming trajectory.
+# By using this parameter, we don't need to run TOTG again.
+time_parameterization_timestep: 0.1 # TOTG default
+
+# This helps control rate accuracy by accounting for sources of latency that are hard to quantify,
+# e.g. network delays
+latency_compensation_seconds: 0.0
+
 # When this close to the target waypoint, move on to the next. An L1 norm across all joints
 waypoint_radian_tolerance: 0.4
 
