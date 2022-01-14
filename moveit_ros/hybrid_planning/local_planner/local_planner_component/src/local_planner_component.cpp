@@ -57,7 +57,7 @@ constexpr float PROGRESS_THRESHOLD = 0.995;
 LocalPlannerComponent::LocalPlannerComponent(const rclcpp::NodeOptions& options)
   : node_{ std::make_shared<rclcpp::Node>("local_planner_component", options) }
 {
-  prev_waypoint_duration_ = nullptr;
+  traj_publication_period_ = nullptr;
   state_ = LocalPlannerState::UNCONFIGURED;
   local_planner_feedback_ = std::make_shared<moveit_msgs::action::LocalPlanner::Feedback>();
 
@@ -197,6 +197,7 @@ bool LocalPlannerComponent::initialize()
               node_->create_wall_timer(1s / config_.local_planning_frequency, [this]() { return executeIteration(); });
         };
         long_callback_thread_ = std::thread(local_planner_timer);
+        traj_publication_period_ = nullptr;
       },
       rcl_action_server_get_default_options(), cb_group_);
 
@@ -315,12 +316,15 @@ void LocalPlannerComponent::executeIteration()
 
       // Publish at the period given in the previous waypoint
       // If initialized. Else, publish immediately.
-      if (prev_waypoint_duration_)
+      if (traj_publication_period_)
       {
-        prev_waypoint_duration_->sleep();
+        traj_publication_period_->sleep();
       }
       rclcpp::Duration waypoint_duration = rclcpp::Duration(local_solution.points.at(0).time_from_start);
-      prev_waypoint_duration_ = std::make_shared<rclcpp::Rate>(1 / waypoint_duration.seconds());
+      // Apply latency compensation to publish a bit sooner. This compensates for ROS message latency
+      // so the controller command arrives exactly when it should.
+      traj_publication_period_ =
+          std::make_shared<rclcpp::Rate>(1 / (waypoint_duration.seconds() - config_.latency_compensation_seconds));
 
       // Use a configurable message interface like MoveIt servo
       // (See https://github.com/ros-planning/moveit2/blob/main/moveit_ros/moveit_servo/src/servo_calcs.cpp)
