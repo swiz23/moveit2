@@ -84,7 +84,7 @@ SimpleSampler::addTrajectorySegment(const robot_trajectory::RobotTrajectory& new
   reference_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(new_trajectory);
 
   // Waypoint duration is based on the fixed TOTG timestep parameter
-  for (size_t waypoint_idx = 0; waypoint_idx < reference_trajectory_->getWayPointCount() - 1; ++waypoint_idx)
+  for (size_t waypoint_idx = 0; waypoint_idx < reference_trajectory_->getWayPointCount(); ++waypoint_idx)
   {
     reference_trajectory_->setWayPointDurationFromPrevious(waypoint_idx, time_param_timestep_);
   }
