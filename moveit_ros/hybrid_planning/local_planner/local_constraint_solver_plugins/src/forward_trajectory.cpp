@@ -134,7 +134,7 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
       {
         current_state_command.zeroAccelerations();
       }
-      robot_command.empty();
+      robot_command.clear();
       robot_command.addSuffixWayPoint(*current_state, local_trajectory.getWayPointDurationFromPrevious(0));
     }
 
