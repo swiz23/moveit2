@@ -32,13 +32,12 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include <moveit/local_planner/local_planner_component.h>
+#include <angles/angles.h>
 
+#include <moveit/local_planner/local_planner_component.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/robot_state.h>
-
 #include <moveit/robot_state/conversions.h>
-
 #include <moveit_msgs/msg/constraints.hpp>
 
 namespace moveit::hybrid_planning
@@ -325,6 +324,22 @@ void LocalPlannerComponent::executeIteration()
       // so the controller command arrives exactly when it should.
       traj_publication_period_ =
           std::make_shared<rclcpp::Rate>(1 / (waypoint_duration.seconds() - config_.latency_compensation_seconds));
+
+      // Angle wrapping
+      // This matters especially for continuous joints
+      current_robot_state = planning_scene->getCurrentStateNonConst();
+      for (auto& point : local_solution.points)
+      {
+        for (size_t joint_idx = 0; joint_idx < point.positions.size(); ++joint_idx)
+        {
+          double& target_position = point.positions.at(joint_idx);
+          double shortest_angle = 0;
+          const double* current_position =
+              current_robot_state.getJointPositions(local_solution.joint_names.at(joint_idx));
+          shortest_angle = angles::shortest_angular_distance(*current_position, target_position);
+          target_position = *current_position + shortest_angle;
+        }
+      }
 
       // Use a configurable message interface like MoveIt servo
       // (See https://github.com/ros-planning/moveit2/blob/main/moveit_ros/moveit_servo/src/servo_calcs.cpp)
