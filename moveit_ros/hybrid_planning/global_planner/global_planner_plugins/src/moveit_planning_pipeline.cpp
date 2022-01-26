@@ -32,6 +32,8 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
+#include <angles/angles.h>
+
 #include <moveit/global_planner/moveit_planning_pipeline.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
@@ -47,6 +49,8 @@ const std::string PLANNING_SCENE_MONITOR_NS = "planning_scene_monitor_options.";
 const std::string PLANNING_PIPELINES_NS = "planning_pipelines.";
 const std::string PLAN_REQUEST_PARAM_NS = "plan_request_params.";
 const std::string UNDEFINED = "<undefined>";
+
+constexpr double JOINT_JUMP_THRESHOLD = 0.5;  // rad, for each individual joint
 
 bool MoveItPlanningPipeline::initialize(const rclcpp::Node::SharedPtr& node)
 {
@@ -115,6 +119,7 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
   if (global_traj_pass_through_ && num_waypoints > 1)
   {
     auto motion_plan_req = global_goal_handle->get_goal()->motion_sequence.items[0].req;
+
     // Start state is the current state of the robot, by default
     // Assume these parameters don't change for any waypoint, aka sequence item
     response.group_name = motion_plan_req.group_name;
@@ -142,6 +147,30 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
     for (const auto& constraint : goal_constraints.joint_constraints)
     {
       response.trajectory.joint_trajectory.joint_names.push_back(constraint.joint_name);
+    }
+
+    // Check that the robot's start position is reasonable
+    moveit_msgs::msg::MotionPlanRequest first_waypoint =
+        global_goal_handle->get_goal()->motion_sequence.items.at(0).req;
+    std::vector<double> current_joint_values;
+    current_state->copyJointGroupPositions(motion_plan_req.group_name, current_joint_values);
+    bool joint_jump_detected = false;
+    for (size_t joint_idx = 0; joint_idx < current_joint_values.size(); ++joint_idx)
+    {
+      const auto& joint_constraint = first_waypoint.goal_constraints.at(0).joint_constraints.at(joint_idx);
+      double angle_difference =
+          std::fabs(angles::shortest_angular_distance(current_joint_values.at(joint_idx), joint_constraint.position));
+      if (angle_difference > JOINT_JUMP_THRESHOLD)
+      {
+        joint_jump_detected = true;
+        break;
+      }
+    }
+    if (joint_jump_detected)
+    {
+      RCLCPP_ERROR(LOGGER, "A large joint angle jump was detected at the first waypoint. Aborting.");
+      response.error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
+      return response;
     }
 
     // Get joint positions
