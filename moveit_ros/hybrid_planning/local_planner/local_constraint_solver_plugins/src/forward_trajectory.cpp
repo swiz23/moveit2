@@ -118,12 +118,10 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
     }
     else
     {
-      if (!path_invalidation_event_send_)
-      {  // Send feedback only once
-        feedback_result.feedback = toString(LocalFeedbackEnum::COLLISION_AHEAD);
-        path_invalidation_event_send_ = true;  // Set feedback flag
-      }
-      RCLCPP_INFO(LOGGER, "Collision ahead, holding current position");
+      // We could fill feedback_result.feedback here to cause a re-planning, but we want to treat a pending collision as
+      // a normal occurrence. Just hold the current robot state and wait for the collision to pass before continuing
+      // or the action to time out.
+      RCLCPP_INFO(LOGGER, "Collision ahead, hold current position");
       // Keep current position
       moveit::core::RobotState current_state_command(*current_state);
       if (current_state_command.hasVelocities())
