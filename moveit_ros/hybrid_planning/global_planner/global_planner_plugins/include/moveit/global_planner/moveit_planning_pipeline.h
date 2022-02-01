@@ -61,5 +61,6 @@ private:
   rclcpp::Node::SharedPtr node_ptr_;
   std::shared_ptr<moveit_cpp::MoveItCpp> moveit_cpp_;
   bool global_traj_pass_through_;
+  double joint_jump_threshold_;
 };
 }  // namespace moveit::hybrid_planning

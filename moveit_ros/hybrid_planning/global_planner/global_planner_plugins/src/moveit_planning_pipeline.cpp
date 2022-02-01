@@ -50,8 +50,6 @@ const std::string PLANNING_PIPELINES_NS = "planning_pipelines.";
 const std::string PLAN_REQUEST_PARAM_NS = "plan_request_params.";
 const std::string UNDEFINED = "<undefined>";
 
-constexpr double JOINT_JUMP_THRESHOLD = 0.5;  // rad, for each individual joint
-
 bool MoveItPlanningPipeline::initialize(const rclcpp::Node::SharedPtr& node)
 {
   // TODO(andyz): how to standardize this for planning pipelines other than ompl?
@@ -59,6 +57,9 @@ bool MoveItPlanningPipeline::initialize(const rclcpp::Node::SharedPtr& node)
 
   // Allow incoming trajectories to pass straight to the local planner without a global re-plan?
   global_traj_pass_through_ = node->declare_parameter<bool>("global_traj_pass_through", false);
+
+  // Detect if current robot state deviates too much from first waypoint
+  joint_jump_threshold_ = node->declare_parameter<double>("initial_waypoint_joint_jump", false);
 
   // Declare planning pipeline parameter
   node->declare_parameter<std::vector<std::string>>(PLANNING_PIPELINES_NS + "pipeline_names",
@@ -160,7 +161,7 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
       const auto& joint_constraint = first_waypoint.goal_constraints.at(0).joint_constraints.at(joint_idx);
       double angle_difference =
           std::fabs(angles::shortest_angular_distance(current_joint_values.at(joint_idx), joint_constraint.position));
-      if (angle_difference > JOINT_JUMP_THRESHOLD)
+      if (angle_difference > joint_jump_threshold_)
       {
         joint_jump_detected = true;
         break;

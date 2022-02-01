@@ -4,6 +4,10 @@ global_planner_name: "moveit_hybrid_planning/MoveItPlanningPipeline"
 # without a global replan
 global_traj_pass_through: false
 
+# Detect if the initial state of the robot is more than (this many) rads from first waypoint.
+# This tolerance is for each individual joint.
+initial_waypoint_joint_jump: 0.5  # rad
+
 # The rest of these parameters are typical for moveit_cpp
 planning_scene_monitor_options:
   name: "planning_scene_monitor"
