@@ -299,7 +299,6 @@ void LocalPlannerComponent::executeIteration()
 
       // Solve local planning problem
       trajectory_msgs::msg::JointTrajectory local_solution;
-      local_solution.header.stamp = node_->now();
 
       // Feedback is only sent when the hybrid planning architecture should react to a discrete event that occurred
       // while computing a local solution
@@ -340,6 +339,8 @@ void LocalPlannerComponent::executeIteration()
           target_position = *current_position + shortest_angle;
         }
       }
+
+      local_solution.header.stamp = node_->now();
 
       // Use a configurable message interface like MoveIt servo
       // (See https://github.com/ros-planning/moveit2/blob/main/moveit_ros/moveit_servo/src/servo_calcs.cpp)

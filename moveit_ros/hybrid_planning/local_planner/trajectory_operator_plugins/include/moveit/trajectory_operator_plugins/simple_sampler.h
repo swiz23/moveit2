@@ -39,6 +39,7 @@
  */
 
 #include <moveit/local_planner/trajectory_operator_interface.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
 namespace moveit::hybrid_planning
 {
@@ -62,10 +63,9 @@ private:
   std::size_t
       next_waypoint_index_;  // Indicates which reference trajectory waypoint is the current local goal constrained
   bool pass_through_;  // If true, the reference_trajectory is simply forwarded each time the getLocalTrajectory() function is called
-  double
-      time_param_timestep_;  // Timestep used during time parameterization. This is used to re-assign timestamps to the trajectory
   double waypoint_radian_tolerance_;                      // If closer than this, move to the next waypoint
   moveit_msgs::action::LocalPlanner::Feedback feedback_;  // Empty feedback
   const moveit::core::JointModelGroup* joint_group_;
+  trajectory_processing::TimeOptimalTrajectoryGeneration time_parameterization_;
 };
 }  // namespace moveit::hybrid_planning
