@@ -148,7 +148,12 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
     {
       if (prev_waypoint_target_->distance(*robot_command.getFirstWayPointPtr()) <= STUCK_THRESHOLD_RAD)
       {
-        ++num_iterations_stuck_;
+        // Iterate the "stuck" counter only if the path is valid (e.g. no collision)
+        // Otherwise wait for the collision object to move.
+        if (is_path_valid)
+        {
+          ++num_iterations_stuck_;
+        }
         if (num_iterations_stuck_ > STUCK_ITERATIONS_THRESHOLD)
         {
           num_iterations_stuck_ = 0;
