@@ -305,11 +305,25 @@ void LocalPlannerComponent::executeIteration()
       *local_planner_feedback_ = local_constraint_solver_instance_->solve(
           local_trajectory, local_planning_goal_handle_->get_goal(), local_solution);
 
-      // Feedback is only send when the hybrid planning architecture should react to a discrete event
+      // Feedback is only sent when the hybrid planning architecture should react to a discrete event
       if (!local_planner_feedback_->feedback.empty())
       {
-        local_planning_goal_handle_->publish_feedback(local_planner_feedback_);
+        // Prevent the SimpleSampler from moving to the next waypoint, e.g. if a collision is ahead
+        trajectory_operator_instance_->preventForwardProgress();
+
+        // For this implementation, we decided to treat upcoming collisions as a normal occurrence.
+        // Do not publish the feedback to abort hybrid planning. We wait for the obstacle to clear or the action
+        // to abort.
+        // For any other feedback, publish the result.
+        if (local_planner_feedback_->feedback.compare("collision_ahead"))
+        {
+          local_planning_goal_handle_->publish_feedback(local_planner_feedback_);
+        }
         return;
+      }
+      else
+      {
+        trajectory_operator_instance_->allowForwardProgress();
       }
 
       // Publish at the period given in the previous waypoint
