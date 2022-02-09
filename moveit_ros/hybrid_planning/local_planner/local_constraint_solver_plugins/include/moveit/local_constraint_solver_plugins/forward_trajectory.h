@@ -69,5 +69,9 @@ private:
   // Detect when the local planner gets stuck
   size_t num_iterations_stuck_;
   moveit::core::RobotStatePtr prev_waypoint_target_;
+
+  // Record if the trajectory was previously valid.
+  // This is useful if the path becomes clear because a collision object moves.
+  bool previously_valid_path_;
 };
 }  // namespace moveit::hybrid_planning

@@ -60,6 +60,7 @@ bool ForwardTrajectory::initialize(const rclcpp::Node::SharedPtr& node,
   node_ = node;
   path_invalidation_event_send_ = false;
   num_iterations_stuck_ = 0;
+  previously_valid_path_ = false;
   return true;
 }
 
@@ -138,6 +139,12 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
       robot_command.addSuffixWayPoint(*current_state, local_trajectory.getWayPointDurationFromPrevious(0));
     }
 
+    // Reset "stuck detection" counter in case a collision object has moved and the path is now clear
+    if (!previously_valid_path_ && is_path_valid)
+    {
+      num_iterations_stuck_ = 0;
+    }
+
     // Detect if the local solver is stuck
     if (!prev_waypoint_target_)
     {
@@ -168,6 +175,7 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
         prev_waypoint_target_ = robot_command.getFirstWayPointPtr();
       }
     }
+    previously_valid_path_ = is_path_valid;
   }
 
   // Transform robot trajectory into joint_trajectory message
