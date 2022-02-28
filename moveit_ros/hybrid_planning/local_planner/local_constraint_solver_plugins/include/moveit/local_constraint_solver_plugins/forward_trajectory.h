@@ -73,5 +73,8 @@ private:
   // Record if the trajectory was previously valid.
   // This is useful if the path becomes clear because a collision object moves.
   bool previously_valid_path_;
+
+  collision_detection::CollisionRequest collision_request_;
+  collision_detection::CollisionResult collision_result_;
 };
 }  // namespace moveit::hybrid_planning
