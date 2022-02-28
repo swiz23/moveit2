@@ -340,7 +340,6 @@ void LocalPlannerComponent::executeIteration()
 
       // Angle wrapping
       // This matters especially for continuous joints
-      current_robot_state = planning_scene->getCurrentStateNonConst();
       for (auto& point : local_solution.points)
       {
         for (size_t joint_idx = 0; joint_idx < point.positions.size(); ++joint_idx)
