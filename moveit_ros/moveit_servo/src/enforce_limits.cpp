@@ -47,18 +47,18 @@ namespace moveit_servo
 {
 namespace
 {
-double getVelocityScalingFactor(const moveit::core::JointModelGroup* joint_model_group, const Eigen::VectorXd& velocity)
+double getVelocityScalingFactor(const std::vector<moveit_msgs::msg::JointLimits>& active_joints_models_bounds,
+                                const Eigen::VectorXd& velocity)
 {
   std::size_t joint_delta_index{ 0 };
   double velocity_scaling_factor{ 1.0 };
-  for (const moveit::core::JointModel* joint : joint_model_group->getActiveJointModels())
+  for (const auto& bounds : active_joints_models_bounds)
   {
-    const auto& bounds = joint->getVariableBounds(joint->getName());
-    if (bounds.velocity_bounded_ && velocity(joint_delta_index) != 0.0)
+    if (bounds.has_velocity_limits && velocity(joint_delta_index) != 0.0)
     {
       const double unbounded_velocity = velocity(joint_delta_index);
       // Clamp each joint velocity to a joint specific [min_velocity, max_velocity] range.
-      const auto bounded_velocity = std::min(std::max(unbounded_velocity, bounds.min_velocity_), bounds.max_velocity_);
+      const auto bounded_velocity = std::min(std::max(unbounded_velocity, -bounds.max_velocity), bounds.max_velocity);
       velocity_scaling_factor = std::min(velocity_scaling_factor, bounded_velocity / unbounded_velocity);
     }
     ++joint_delta_index;
@@ -69,8 +69,9 @@ double getVelocityScalingFactor(const moveit::core::JointModelGroup* joint_model
 
 }  // namespace
 
-void enforceVelocityLimits(const moveit::core::JointModelGroup* joint_model_group, const double publish_period,
-                           sensor_msgs::msg::JointState& joint_state, const double override_velocity_scaling_factor)
+void enforceVelocityLimits(const std::vector<moveit_msgs::msg::JointLimits>& active_joints_models_bounds,
+                           const double publish_period, sensor_msgs::msg::JointState& joint_state,
+                           const double override_velocity_scaling_factor)
 {
   // Get the velocity scaling factor
   Eigen::VectorXd velocity =
@@ -78,7 +79,7 @@ void enforceVelocityLimits(const moveit::core::JointModelGroup* joint_model_grou
   double velocity_scaling_factor = override_velocity_scaling_factor;
   // if the override velocity scaling factor is approximately zero then the user is not overriding the value.
   if (override_velocity_scaling_factor < 0.01)
-    velocity_scaling_factor = getVelocityScalingFactor(joint_model_group, velocity);
+    velocity_scaling_factor = getVelocityScalingFactor(active_joints_models_bounds, velocity);
 
   // Take a smaller step if the velocity scaling factor is less than 1
   if (velocity_scaling_factor < 1)

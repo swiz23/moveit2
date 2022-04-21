@@ -101,6 +101,11 @@ ServoCalcs::ServoCalcs(rclcpp::Node::SharedPtr node,
     throw std::runtime_error("Invalid move group name");
   }
 
+  for (auto joint : joint_model_group_->getActiveJointModels())
+  {
+    active_joints_models_bounds_.push_back(joint->getVariableBoundsMsg()[0]);
+  }
+
   // Subscribe to command topics
   twist_stamped_sub_ = node_->create_subscription<geometry_msgs::msg::TwistStamped>(
       parameters_->cartesian_command_in_topic, rclcpp::SystemDefaultsQoS(),
@@ -130,6 +135,14 @@ ServoCalcs::ServoCalcs(rclcpp::Node::SharedPtr node,
       "~/reset_servo_status",
       [this](const std::shared_ptr<std_srvs::srv::Empty::Request> req,
              std::shared_ptr<std_srvs::srv::Empty::Response> res) { return resetServoStatus(req, res); });
+
+  // ROS Server to reset the status, e.g. so the arm can move again after a collision
+  joint_limits_update_server_ = node_->create_service<moveit_msgs::srv::ChangeJointLimits>(
+      "~/change_joint_limits",
+      [this](const std::shared_ptr<moveit_msgs::srv::ChangeJointLimits::Request> req,
+             std::shared_ptr<moveit_msgs::srv::ChangeJointLimits::Response> res) {
+        return changeJointLimits(req, res);
+      });
 
   // Subscribe to the collision_check topic
   collision_velocity_scale_sub_ = node_->create_subscription<std_msgs::msg::Float64>(
@@ -724,7 +737,7 @@ bool ServoCalcs::internalServoUpdate(Eigen::ArrayXd& delta_theta,
   updated_filters_ = true;
 
   // Enforce SRDF velocity limits
-  enforceVelocityLimits(joint_model_group_, parameters_->publish_period, internal_joint_state_,
+  enforceVelocityLimits(active_joints_models_bounds_, parameters_->publish_period, internal_joint_state_,
                         parameters_->override_velocity_scaling_factor);
 
   // Enforce SRDF position limits, might halt if needed, set prev_vel to 0
@@ -1227,6 +1240,39 @@ void ServoCalcs::changeControlDimensions(const std::shared_ptr<moveit_msgs::srv:
   control_dimensions_[3] = req->control_x_rotation;
   control_dimensions_[4] = req->control_y_rotation;
   control_dimensions_[5] = req->control_z_rotation;
+
+  res->success = true;
+}
+
+void ServoCalcs::changeJointLimits(const std::shared_ptr<moveit_msgs::srv::ChangeJointLimits::Request> req,
+                                   std::shared_ptr<moveit_msgs::srv::ChangeJointLimits::Response> res)
+{
+  for (auto jl : req->limits)
+  {
+    for (auto& joint : active_joints_models_bounds_)
+    {
+      if (jl.joint_name == joint.joint_name)
+      {
+        if (jl.has_position_limits)
+        {
+          RCLCPP_WARN_STREAM(LOGGER, "Dynamically updating position limits is not supported");
+        }
+        if (jl.has_velocity_limits)
+        {
+          joint.max_velocity = jl.max_velocity;
+        }
+        if (jl.has_acceleration_limits)
+        {
+          RCLCPP_WARN_STREAM(LOGGER, "Dynamically updating acceleration limits is not supported");
+        }
+        if (jl.has_jerk_limits)
+        {
+          RCLCPP_WARN_STREAM(LOGGER, "Dynamically updating jerk limits is not supported");
+        }
+        break;
+      }
+    }
+  }
 
   res->success = true;
 }
