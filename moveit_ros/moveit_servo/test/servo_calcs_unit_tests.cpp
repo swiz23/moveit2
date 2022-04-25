@@ -73,7 +73,7 @@ protected:
   {
     robot_model_ = moveit::core::loadTestingRobotModel("panda");
     joint_model_group_ = robot_model_->getJointModelGroup("panda_arm");
-    for (auto joint : joint_model_group_->getActiveJointModels())
+    for (const auto& joint : joint_model_group_->getActiveJointModels())
     {
       active_joints_models_bounds_.push_back(joint->getVariableBoundsMsg()[0]);
     }

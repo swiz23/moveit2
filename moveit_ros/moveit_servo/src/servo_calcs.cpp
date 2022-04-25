@@ -101,7 +101,7 @@ ServoCalcs::ServoCalcs(rclcpp::Node::SharedPtr node,
     throw std::runtime_error("Invalid move group name");
   }
 
-  for (auto joint : joint_model_group_->getActiveJointModels())
+  for (const auto& joint : joint_model_group_->getActiveJointModels())
   {
     active_joints_models_bounds_.push_back(joint->getVariableBoundsMsg()[0]);
   }
@@ -1247,7 +1247,24 @@ void ServoCalcs::changeControlDimensions(const std::shared_ptr<moveit_msgs::srv:
 void ServoCalcs::changeJointLimits(const std::shared_ptr<moveit_msgs::srv::ChangeJointLimits::Request> req,
                                    std::shared_ptr<moveit_msgs::srv::ChangeJointLimits::Response> res)
 {
-  for (auto jl : req->limits)
+  // Verify all requested joints to update exist
+  for (const auto& jl : req->limits)
+  {
+    auto const it = std::find_if(
+      active_joints_models_bounds_.begin(), active_joints_models_bounds_.end(),
+      [&, jl](const moveit_msgs::msg::JointLimits & active_joint_bounds)
+          -> bool { return jl.joint_name == active_joint_bounds.joint_name; });
+
+    if (it == active_joints_models_bounds_.end())
+    {
+      RCLCPP_ERROR_STREAM(LOGGER, "Joint " << jl.joint_name << " was not found. Not processing request.");
+      res->success = false;
+      return;
+    }
+  }
+
+  // Update the limits
+  for (const auto& jl : req->limits)
   {
     for (auto& joint : active_joints_models_bounds_)
     {
