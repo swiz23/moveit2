@@ -276,11 +276,13 @@ bool HybridPlanningManager::sendGlobalPlannerAction()
         }
       };
 
-  // Forward global trajectory goal from hybrid planning request TODO(sjahr) pass goal as function argument
+  // Forward global trajectory goal from hybrid planning request
+  // TODO(sjahr) pass goal as function argument
   auto global_goal_msg = moveit_msgs::action::GlobalPlanner::Goal();
   global_goal_msg.motion_sequence =
       (hybrid_planning_goal_handle_->get_goal())->motion_sequence;  // latest desired motion sequence;
-  global_goal_msg.planning_group = (hybrid_planning_goal_handle_->get_goal())->planning_group;  // planning_group_;
+  global_goal_msg.planning_group = (hybrid_planning_goal_handle_->get_goal())->planning_group;
+  global_goal_msg.trajectory = hybrid_planning_goal_handle_->get_goal()->trajectory;
 
   if (stop_hybrid_planning_)
   {

@@ -77,9 +77,6 @@ SimpleSampler::addTrajectorySegment(const robot_trajectory::RobotTrajectory& new
   // Throw away old reference trajectory and use trajectory update
   reference_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(new_trajectory);
 
-  // Parameterize trajectory, calculating velocities and accelerations
-  time_parameterization_.computeTimeStamps(*reference_trajectory_);
-
   // If no errors, return empty feedback
   return feedback_;
 }

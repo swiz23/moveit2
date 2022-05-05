@@ -39,7 +39,6 @@
  */
 
 #include <moveit/local_planner/trajectory_operator_interface.h>
-#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
 namespace moveit::hybrid_planning
 {
@@ -74,7 +73,6 @@ private:
   double waypoint_radian_tolerance_;                      // If closer than this, move to the next waypoint
   moveit_msgs::action::LocalPlanner::Feedback feedback_;  // Empty feedback
   const moveit::core::JointModelGroup* joint_group_;
-  trajectory_processing::TimeOptimalTrajectoryGeneration time_parameterization_;
   std::atomic<bool> prevent_forward_progress_;  // Flag to prevent moving to the next waypoint
 };
 }  // namespace moveit::hybrid_planning

@@ -115,7 +115,7 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
   }
 
   // If global_traj_pass_through_ and multiple waypoints were requested, assume we have a fully planned trajectory
-  // already. Just forward it to the local planner. This works only for a JointConstraint type.
+  // already. Just forward it to the local planner.
   size_t num_waypoints = global_goal_handle->get_goal()->motion_sequence.items.size();
   if (global_traj_pass_through_ && num_waypoints > 1)
   {
@@ -135,20 +135,6 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
     moveit_msgs::msg::RobotState current_state_msg;
     moveit::core::robotStateToRobotStateMsg(*current_state, current_state_msg);
     response.trajectory_start = current_state_msg;
-
-    moveit_msgs::msg::Constraints goal_constraints =
-        global_goal_handle->get_goal()->motion_sequence.items.at(0).req.goal_constraints.at(0);
-    if (goal_constraints.joint_constraints.empty())
-    {
-      RCLCPP_ERROR(LOGGER, "Constraints of the motion plan request were empty or not of JointConstraint type.");
-      std::exit(EXIT_FAILURE);
-    }
-
-    // Get joint names
-    for (const auto& constraint : goal_constraints.joint_constraints)
-    {
-      response.trajectory.joint_trajectory.joint_names.push_back(constraint.joint_name);
-    }
 
     // Check that the robot's start position is reasonable
     moveit_msgs::msg::MotionPlanRequest first_waypoint =
@@ -174,22 +160,7 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
       return response;
     }
 
-    // Get joint positions
-    trajectory_msgs::msg::JointTrajectoryPoint waypoint;
-    for (size_t waypoint_idx = 0; waypoint_idx < num_waypoints; ++waypoint_idx)
-    {
-      moveit_msgs::msg::MotionPlanRequest waypoint_req =
-          global_goal_handle->get_goal()->motion_sequence.items.at(waypoint_idx).req;
-
-      trajectory_msgs::msg::JointTrajectoryPoint traj_point;
-      for (const moveit_msgs::msg::JointConstraint& joint_constraint :
-           waypoint_req.goal_constraints.at(0).joint_constraints)
-      {
-        traj_point.positions.push_back(joint_constraint.position);
-      }
-
-      response.trajectory.joint_trajectory.points.push_back(traj_point);
-    }
+    response.trajectory.joint_trajectory = global_goal_handle->get_goal()->trajectory;
     return response;
   }
 
