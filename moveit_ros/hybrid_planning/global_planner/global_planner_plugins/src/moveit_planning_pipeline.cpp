@@ -74,6 +74,7 @@ bool MoveItPlanningPipeline::initialize(const rclcpp::Node::SharedPtr& node)
   node->declare_parameter<double>(PLAN_REQUEST_PARAM_NS + "max_velocity_scaling_factor", 1.0);
   node->declare_parameter<double>(PLAN_REQUEST_PARAM_NS + "max_acceleration_scaling_factor", 1.0);
   node->declare_parameter<std::string>("ompl.planning_plugin", "ompl_interface/OMPLPlanner");
+  node->declare_parameter<std::string>("ompl.request_adapters, UNDEFINED");
 
   // Planning Scene options
   node->declare_parameter<std::string>(PLANNING_SCENE_MONITOR_NS + "name", UNDEFINED);
@@ -114,9 +115,9 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
     return response;
   }
 
-  // If global_traj_pass_through_ and multiple waypoints were requested, assume we have a fully planned trajectory
-  // already. Just forward it to the local planner.
-  size_t num_waypoints = global_goal_handle->get_goal()->motion_sequence.items.size();
+  // If global_traj_pass_through_ and multiple waypoints are defined in the trajectory, assume we have a fully planned
+  // trajectory already. Just forward it to the local planner.
+  size_t num_waypoints = global_goal_handle->get_goal()->trajectory.points.size();
   if (global_traj_pass_through_ && num_waypoints > 1)
   {
     auto motion_plan_req = global_goal_handle->get_goal()->motion_sequence.items[0].req;
@@ -137,16 +138,15 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
     response.trajectory_start = current_state_msg;
 
     // Check that the robot's start position is reasonable
-    moveit_msgs::msg::MotionPlanRequest first_waypoint =
-        global_goal_handle->get_goal()->motion_sequence.items.at(0).req;
+    trajectory_msgs::msg::JointTrajectoryPoint first_waypoint = global_goal_handle->get_goal()->trajectory.points.at(0);
     std::vector<double> current_joint_values;
     current_state->copyJointGroupPositions(motion_plan_req.group_name, current_joint_values);
     bool joint_jump_detected = false;
+    const auto& joint_positions = first_waypoint.positions;
     for (size_t joint_idx = 0; joint_idx < current_joint_values.size(); ++joint_idx)
     {
-      const auto& joint_constraint = first_waypoint.goal_constraints.at(0).joint_constraints.at(joint_idx);
-      double angle_difference =
-          std::fabs(angles::shortest_angular_distance(current_joint_values.at(joint_idx), joint_constraint.position));
+      double angle_difference = std::fabs(
+          angles::shortest_angular_distance(current_joint_values.at(joint_idx), joint_positions.at(joint_idx)));
       if (angle_difference > joint_jump_threshold_)
       {
         joint_jump_detected = true;
