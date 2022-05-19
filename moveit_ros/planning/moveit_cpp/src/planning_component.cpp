@@ -135,6 +135,9 @@ PlanningComponent::PlanSolution PlanningComponent::plan(const PlanRequestParamet
   req.allowed_planning_time = parameters.planning_time;
   req.max_velocity_scaling_factor = parameters.max_velocity_scaling_factor;
   req.max_acceleration_scaling_factor = parameters.max_acceleration_scaling_factor;
+  req.joint_limits = parameters.joint_limits;
+  req.use_joint_limits = parameters.use_joint_limits;
+  req.skip_smoothing = parameters.skip_smoothing;
   if (workspace_parameters_set_)
     req.workspace_parameters = workspace_parameters_;
 

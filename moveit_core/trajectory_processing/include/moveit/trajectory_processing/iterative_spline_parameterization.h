@@ -81,6 +81,9 @@ public:
                          const std::unordered_map<std::string, double>& velocity_limits,
                          const std::unordered_map<std::string, double>& acceleration_limits) const override;
 
+  bool computeTimeStamps(robot_trajectory::RobotTrajectory& trajectory,
+                         const std::vector<moveit_msgs::msg::JointLimits>& joint_limits) const override;
+
 private:
   bool add_points_;  /// @brief If true, add two points to trajectory (first and last segments).
                      /// If false, move the 2nd and 2nd-last points.

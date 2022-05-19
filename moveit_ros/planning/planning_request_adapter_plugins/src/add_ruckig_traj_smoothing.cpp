@@ -65,13 +65,13 @@ public:
                     std::vector<std::size_t>& /*added_path_index*/) const override
   {
     bool result = planner(planning_scene, req, res);
-    if (result && res.trajectory_)
+    if (result && res.trajectory_ && !req.skip_smoothing)
     {
-      if (!smoother_.applySmoothing(*res.trajectory_, req.max_velocity_scaling_factor,
-                                    req.max_acceleration_scaling_factor))
-      {
-        result = false;
-      }
+      if (req.use_joint_limits)
+        result = smoother_.applySmoothing(*res.trajectory_, req.joint_limits);
+      else
+        result = smoother_.applySmoothing(*res.trajectory_, req.max_velocity_scaling_factor,
+                                          req.max_acceleration_scaling_factor);
     }
 
     return result;

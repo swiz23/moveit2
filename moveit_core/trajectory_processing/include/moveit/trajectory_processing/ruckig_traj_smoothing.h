@@ -54,6 +54,9 @@ public:
                              const std::unordered_map<std::string, double>& acceleration_limits,
                              const std::unordered_map<std::string, double>& jerk_limits);
 
+  static bool applySmoothing(robot_trajectory::RobotTrajectory& trajectory,
+                             const std::vector<moveit_msgs::msg::JointLimits>& joint_limits);
+
 private:
   /**
    * \brief A utility function to check if the group is defined.

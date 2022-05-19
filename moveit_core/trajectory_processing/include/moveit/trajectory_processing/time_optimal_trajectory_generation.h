@@ -174,6 +174,9 @@ public:
                          const std::unordered_map<std::string, double>& velocity_limits,
                          const std::unordered_map<std::string, double>& acceleration_limits) const override;
 
+  bool computeTimeStamps(robot_trajectory::RobotTrajectory& trajectory,
+                         const std::vector<moveit_msgs::msg::JointLimits>& joint_limits) const override;
+
 private:
   bool doTimeParameterizationCalculations(robot_trajectory::RobotTrajectory& trajectory,
                                           const Eigen::VectorXd& max_velocity,

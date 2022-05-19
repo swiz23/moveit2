@@ -142,6 +142,31 @@ bool RuckigSmoothing::applySmoothing(robot_trajectory::RobotTrajectory& trajecto
   return runRuckig(trajectory, ruckig_input);
 }
 
+bool RuckigSmoothing::applySmoothing(
+    robot_trajectory::RobotTrajectory& trajectory,
+    const std::vector<moveit_msgs::msg::JointLimits>& joint_limits)
+{
+    std::unordered_map<std::string, double> velocity_limits;
+    std::unordered_map<std::string, double> acceleration_limits;
+    std::unordered_map<std::string, double> jerk_limits;
+    for (const auto& limit : joint_limits)
+    {
+        if (limit.has_velocity_limits)
+        {
+            velocity_limits[limit.joint_name] = limit.max_velocity;
+        }
+        if (limit.has_acceleration_limits)
+        {
+            acceleration_limits[limit.joint_name] = limit.max_acceleration;
+        }
+        if (limit.has_jerk_limits)
+        {
+            jerk_limits[limit.joint_name] = limit.max_jerk;
+        }
+    }
+    return applySmoothing(trajectory, velocity_limits, acceleration_limits, jerk_limits);
+}
+
 bool RuckigSmoothing::validateGroup(const robot_trajectory::RobotTrajectory& trajectory)
 {
   moveit::core::JointModelGroup const* const group = trajectory.getGroup();

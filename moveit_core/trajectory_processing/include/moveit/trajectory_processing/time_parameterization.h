@@ -18,5 +18,7 @@ public:
   virtual bool computeTimeStamps(robot_trajectory::RobotTrajectory& trajectory,
                                  const std::unordered_map<std::string, double>& velocity_limits,
                                  const std::unordered_map<std::string, double>& acceleration_limits) const = 0;
+  virtual bool computeTimeStamps(robot_trajectory::RobotTrajectory& trajectory,
+                                 const std::vector<moveit_msgs::msg::JointLimits>& joint_limits) const = 0;
 };
 }  // namespace trajectory_processing

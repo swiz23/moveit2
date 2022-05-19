@@ -57,6 +57,9 @@ public:
                          const std::unordered_map<std::string, double>& velocity_limits,
                          const std::unordered_map<std::string, double>& acceleration_limits) const override;
 
+  bool computeTimeStamps(robot_trajectory::RobotTrajectory& trajectory,
+                         const std::vector<moveit_msgs::msg::JointLimits>& joint_limits) const override;
+
 private:
   unsigned int max_iterations_;    /// @brief maximum number of iterations to find solution
   double max_time_change_per_it_;  /// @brief maximum allowed time change per iteration in seconds
