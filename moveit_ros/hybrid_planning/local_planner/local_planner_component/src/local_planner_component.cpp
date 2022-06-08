@@ -209,6 +209,9 @@ bool LocalPlannerComponent::initialize()
         moveit::core::robotStateMsgToRobotState(msg->trajectory_start, start_state);
         new_trajectory.setRobotTrajectoryMsg(start_state, msg->trajectory);
         *local_planner_feedback_ = trajectory_operator_instance_->addTrajectorySegment(new_trajectory);
+        // Ensure first waypoint does not get skipped by preventing forward progress
+        // This will get reset automatically in the next iteration
+        trajectory_operator_instance_->preventForwardProgress();
 
         // Feedback is only send when the hybrid planning architecture should react to a discrete event that occurred
         // when the reference trajectory is updated
@@ -276,6 +279,10 @@ void LocalPlannerComponent::executeIteration()
       // Check if the global goal is reached
       if (trajectory_operator_instance_->getTrajectoryProgress(current_robot_state) > PROGRESS_THRESHOLD)
       {
+        if (traj_publication_period_)
+        {
+          traj_publication_period_->sleep();
+        }
         local_planning_goal_handle_->succeed(result);
         reset();
         return;
@@ -333,10 +340,17 @@ void LocalPlannerComponent::executeIteration()
         traj_publication_period_->sleep();
       }
       rclcpp::Duration waypoint_duration = rclcpp::Duration(local_solution.points.at(0).time_from_start);
-      // Apply latency compensation to publish a bit sooner. This compensates for ROS message latency
-      // so the controller command arrives exactly when it should.
-      traj_publication_period_ =
-          std::make_shared<rclcpp::Rate>(1 / (waypoint_duration.seconds() - config_.latency_compensation_seconds));
+      if (waypoint_duration == rclcpp::Duration(0, 0))
+      {
+        traj_publication_period_ = std::make_shared<rclcpp::Rate>(config_.local_planning_frequency);
+      }
+      else
+      {
+        // Apply latency compensation to publish a bit sooner. This compensates for ROS message latency
+        // so the controller command arrives exactly when it should.
+        traj_publication_period_ =
+            std::make_shared<rclcpp::Rate>(1 / (waypoint_duration.seconds() - config_.latency_compensation_seconds));
+      }
 
       // Angle wrapping
       // This matters especially for continuous joints
@@ -353,7 +367,10 @@ void LocalPlannerComponent::executeIteration()
         }
       }
 
-      local_solution.header.stamp = node_->now();
+      // Set time stamps for all waypoints that have nonzero waypoint durations
+      if (waypoint_duration != rclcpp::Duration(0, 0)) {
+        local_solution.header.stamp = node_->now();
+      }
 
       // Use a configurable message interface like MoveIt servo
       // (See https://github.com/ros-planning/moveit2/blob/main/moveit_ros/moveit_servo/src/servo_calcs.cpp)
