@@ -352,21 +352,6 @@ void LocalPlannerComponent::executeIteration()
             std::make_shared<rclcpp::Rate>(1 / (waypoint_duration.seconds() - config_.latency_compensation_seconds));
       }
 
-      // Angle wrapping
-      // This matters especially for continuous joints
-      for (auto& point : local_solution.points)
-      {
-        for (size_t joint_idx = 0; joint_idx < point.positions.size(); ++joint_idx)
-        {
-          double& target_position = point.positions.at(joint_idx);
-          double shortest_angle = 0;
-          const double* current_position =
-              current_robot_state.getJointPositions(local_solution.joint_names.at(joint_idx));
-          shortest_angle = angles::shortest_angular_distance(*current_position, target_position);
-          target_position = *current_position + shortest_angle;
-        }
-      }
-
       // Set time stamps for all waypoints that have nonzero waypoint durations
       if (waypoint_duration != rclcpp::Duration(0, 0)) {
         local_solution.header.stamp = node_->now();
