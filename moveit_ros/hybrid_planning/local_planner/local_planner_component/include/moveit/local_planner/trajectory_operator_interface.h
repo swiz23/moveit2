@@ -85,7 +85,8 @@ public:
    */
   virtual moveit_msgs::action::LocalPlanner::Feedback
   getLocalTrajectory(const moveit::core::RobotState& current_state,
-                     robot_trajectory::RobotTrajectory& local_trajectory) = 0;
+                     robot_trajectory::RobotTrajectory& local_trajectory,
+                     const bool& previous_wypt_duration_finished) = 0;
 
   /**
    * Return the processing status of the reference trajectory's execution based on a user defined
@@ -106,6 +107,8 @@ public:
 
   /** \brief Set a flag that allows SimpleSampler to move to the next waypoint */
   virtual void allowForwardProgress() = 0;
+
+  virtual bool isLastWaypoint() = 0;
 
 protected:
   // Reference trajectory to be precessed

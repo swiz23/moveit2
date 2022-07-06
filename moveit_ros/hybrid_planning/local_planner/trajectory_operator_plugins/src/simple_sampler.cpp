@@ -47,23 +47,23 @@ bool SimpleSampler::initialize([[maybe_unused]] const rclcpp::Node::SharedPtr& n
                                const moveit::core::RobotModelConstPtr& robot_model, const std::string& group_name)
 {
   // Load parameter & initialize member variables
-  node->declare_parameter("pass_through", false);
-  if (!node->get_parameter<bool>("pass_through", pass_through_))
-  {
-    RCLCPP_ERROR(LOGGER, "pass_through parameter was not defined.");
-    return false;
-  }
-
-  node->declare_parameter("waypoint_radian_tolerance", 0.0);
+  node->declare_parameter("waypoint_radian_tolerance", 0.2);
   if (!node->get_parameter<double>("waypoint_radian_tolerance", waypoint_radian_tolerance_))
   {
     RCLCPP_ERROR(LOGGER, "waypoint_radian_tolerance parameter was not defined.");
+    return false;
+  }
+  node->declare_parameter("goal_tolerance", 0.02);
+  if (!node->get_parameter<double>("goal_tolerance", goal_tolerance_))
+  {
+    RCLCPP_ERROR(LOGGER, "goal_tolerance parameter was not defined.");
     return false;
   }
 
   reference_trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(robot_model, group_name);
   next_waypoint_index_ = 0;
   prevent_forward_progress_ = false;
+  trajectory_finished_ = false;
   joint_group_ = robot_model->getJointModelGroup(group_name);
   return true;
 }
@@ -86,12 +86,14 @@ bool SimpleSampler::reset()
   // Reset index
   next_waypoint_index_ = 0;
   prevent_forward_progress_ = false;
+  trajectory_finished_ = false;
   reference_trajectory_->clear();
   return true;
 }
 moveit_msgs::action::LocalPlanner::Feedback
 SimpleSampler::getLocalTrajectory(const moveit::core::RobotState& current_state,
-                                  robot_trajectory::RobotTrajectory& local_trajectory)
+                                  robot_trajectory::RobotTrajectory& local_trajectory,
+                                  const bool& previous_wypt_duration_finished)
 {
   if (reference_trajectory_->getWayPointCount() == 0)
   {
@@ -105,23 +107,21 @@ SimpleSampler::getLocalTrajectory(const moveit::core::RobotState& current_state,
   // Get next desired robot state
   const moveit::core::RobotState next_desired_goal_state = reference_trajectory_->getWayPoint(next_waypoint_index_);
 
-  // Check if state is reached
-  if (next_desired_goal_state.distance(current_state, joint_group_) <= waypoint_radian_tolerance_)
+  double waypoint_radian_tolerance = waypoint_radian_tolerance_;
+  if (next_waypoint_index_ == reference_trajectory_->getWayPointCount() - 1)
   {
-    // Get next desired robot state
-    moveit::core::RobotState next_desired_goal_state = reference_trajectory_->getWayPoint(next_waypoint_index_);
-
-    // Progress forward to the next waypoint?
-    if (!prevent_forward_progress_ &&
-        next_desired_goal_state.distance(current_state, joint_group_) <= waypoint_radian_tolerance_)
+    waypoint_radian_tolerance = goal_tolerance_;
+  }
+  // Check if state is reached
+  if (!prevent_forward_progress_ && previous_wypt_duration_finished &&
+      next_desired_goal_state.distance(current_state, joint_group_) <= waypoint_radian_tolerance)
+  {
+    if (next_waypoint_index_ == reference_trajectory_->getWayPointCount() - 1)
     {
-      // Update index (and thus desired robot state)
-      next_waypoint_index_ = std::min(next_waypoint_index_ + 1, reference_trajectory_->getWayPointCount() - 1);
+      trajectory_finished_ = true;
     }
-
-    // Construct local trajectory containing the next global trajectory waypoint
-    local_trajectory.addSuffixWayPoint(reference_trajectory_->getWayPoint(next_waypoint_index_),
-                                       reference_trajectory_->getWayPointDurationFromPrevious(next_waypoint_index_));
+    // Update index (and thus desired robot state)
+    next_waypoint_index_ = std::min(next_waypoint_index_ + 1, reference_trajectory_->getWayPointCount() - 1);
   }
 
   // Construct local trajectory containing the next global trajectory waypoint
@@ -135,7 +135,7 @@ SimpleSampler::getLocalTrajectory(const moveit::core::RobotState& current_state,
 double SimpleSampler::getTrajectoryProgress([[maybe_unused]] const moveit::core::RobotState& current_state)
 {
   // Check if trajectory is unwound
-  if (next_waypoint_index_ >= reference_trajectory_->getWayPointCount() - 1)
+  if (trajectory_finished_)
   {
     return 1.0;
   }
@@ -150,6 +150,11 @@ void SimpleSampler::preventForwardProgress()
 void SimpleSampler::allowForwardProgress()
 {
   prevent_forward_progress_ = false;
+}
+
+bool SimpleSampler::isLastWaypoint()
+{
+  return next_waypoint_index_ == reference_trajectory_->getWayPointCount() - 1;
 }
 }  // namespace moveit::hybrid_planning
 

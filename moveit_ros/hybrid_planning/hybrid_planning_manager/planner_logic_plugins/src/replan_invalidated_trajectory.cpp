@@ -47,6 +47,7 @@ ReactionResult ReplanInvalidatedTrajectory::react(const std::string& event)
   if ((event == toString(LocalFeedbackEnum::COLLISION_AHEAD)) ||
       (event == toString(LocalFeedbackEnum::LOCAL_PLANNER_STUCK)))
   {
+    hybrid_planning_manager_->clearCurrentGoalTrajectory();
     if (!hybrid_planning_manager_->sendGlobalPlannerAction())  // Start global planning
     {
       hybrid_planning_manager_->sendHybridPlanningResponse(false);

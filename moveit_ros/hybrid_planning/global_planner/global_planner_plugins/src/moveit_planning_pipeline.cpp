@@ -150,6 +150,7 @@ moveit_msgs::msg::MotionPlanResponse MoveItPlanningPipeline::plan(
       if (angle_difference > joint_jump_threshold_)
       {
         joint_jump_detected = true;
+        RCLCPP_ERROR(LOGGER, "Joint: %ld differs from the start state by: %f", joint_idx, angle_difference);
         break;
       }
     }

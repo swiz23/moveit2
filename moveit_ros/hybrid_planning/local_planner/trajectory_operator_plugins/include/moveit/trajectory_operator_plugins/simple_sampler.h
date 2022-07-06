@@ -56,7 +56,8 @@ public:
 
   moveit_msgs::action::LocalPlanner::Feedback
   getLocalTrajectory(const moveit::core::RobotState& current_state,
-                     robot_trajectory::RobotTrajectory& local_trajectory) override;
+                     robot_trajectory::RobotTrajectory& local_trajectory,
+                     const bool& previous_wypt_duration_finished) override;
 
   double getTrajectoryProgress([[maybe_unused]] const moveit::core::RobotState& current_state) override;
 
@@ -66,13 +67,16 @@ public:
 
   void allowForwardProgress() override;
 
+  bool isLastWaypoint() override;
+
 private:
   std::size_t
       next_waypoint_index_;  // Indicates which reference trajectory waypoint is the current local goal constrained
-  bool pass_through_;  // If true, the reference_trajectory is simply forwarded each time the getLocalTrajectory() function is called
   double waypoint_radian_tolerance_;                      // If closer than this, move to the next waypoint
+  double goal_tolerance_;                                 // If closer than this, consider last waypoint reached
   moveit_msgs::action::LocalPlanner::Feedback feedback_;  // Empty feedback
   const moveit::core::JointModelGroup* joint_group_;
   std::atomic<bool> prevent_forward_progress_;  // Flag to prevent moving to the next waypoint
+  std::atomic<bool> trajectory_finished_;
 };
 }  // namespace moveit::hybrid_planning

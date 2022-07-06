@@ -233,5 +233,11 @@ private:
   rclcpp::CallbackGroup::SharedPtr cb_group_;
 
   std::shared_ptr<rclcpp::Rate> traj_publication_period_;
+
+  rclcpp::Time time_to_send_next_wypt_;
+
+  bool feedback_received_;
+
+  trajectory_msgs::msg::JointTrajectory prev_command_;
 };
 }  // namespace moveit::hybrid_planning

@@ -115,6 +115,11 @@ public:
    */
   void sendHybridPlanningResponse(bool success);
 
+  void clearCurrentGoalTrajectory()
+  {
+    clear_trajectory_ = true;
+  }
+
 private:
   // Planner logic plugin loader
   std::unique_ptr<pluginlib::ClassLoader<PlannerLogicInterface>> planner_logic_plugin_loader_;
@@ -130,6 +135,8 @@ private:
 
   // Flag that indicates hybrid planning has been canceled
   std::atomic<bool> stop_hybrid_planning_;
+
+  std::atomic<bool> clear_trajectory_;
 
   // Shared hybrid planning goal handle
   std::shared_ptr<rclcpp_action::ServerGoalHandle<moveit_msgs::action::HybridPlanner>> hybrid_planning_goal_handle_;

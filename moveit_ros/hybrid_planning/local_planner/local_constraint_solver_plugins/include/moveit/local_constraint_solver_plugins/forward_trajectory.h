@@ -58,7 +58,8 @@ public:
   moveit_msgs::action::LocalPlanner::Feedback
   solve(const robot_trajectory::RobotTrajectory& local_trajectory,
         const std::shared_ptr<const moveit_msgs::action::LocalPlanner::Goal> /* unused */,
-        trajectory_msgs::msg::JointTrajectory& local_solution) override;
+        trajectory_msgs::msg::JointTrajectory& local_solution,
+        const bool& bypass_stuck_check) override;
 
 private:
   rclcpp::Node::SharedPtr node_;

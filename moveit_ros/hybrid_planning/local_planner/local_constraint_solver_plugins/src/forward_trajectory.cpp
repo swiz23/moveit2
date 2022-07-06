@@ -79,7 +79,8 @@ bool ForwardTrajectory::reset()
 moveit_msgs::action::LocalPlanner::Feedback
 ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajectory,
                          const std::shared_ptr<const moveit_msgs::action::LocalPlanner::Goal> /* unused */,
-                         trajectory_msgs::msg::JointTrajectory& local_solution)
+                         trajectory_msgs::msg::JointTrajectory& local_solution,
+                         const bool& bypass_stuck_check)
 {
   // A message every once in awhile is useful in case the local planner gets stuck
   RCLCPP_INFO_THROTTLE(LOGGER, *node_->get_clock(), 2000 /* ms */, "The local planner is solving...");
@@ -89,6 +90,8 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
 
   // Feedback
   moveit_msgs::action::LocalPlanner::Feedback feedback_result;
+
+  bool is_path_valid = true;
 
   // If this flag is set, ignore collisions
   if (!stop_before_collision_)
@@ -102,7 +105,7 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
     planning_scene_monitor_->updateFrameTransforms();
 
     moveit::core::RobotStatePtr current_state;
-    bool is_path_valid = false;
+    is_path_valid = false;
     // Lock the planning scene as briefly as possible
     {
       planning_scene_monitor::LockedPlanningSceneRO locked_planning_scene(planning_scene_monitor_);
@@ -131,7 +134,7 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
       // or the action to time out.
       // Fill feedback_result.feedback so LocalPlannerComponent can make a higher-level decision
       // about handling this.
-      feedback_result.feedback = "collision_ahead";
+      feedback_result.feedback = toString(LocalFeedbackEnum::COLLISION_AHEAD);
       RCLCPP_INFO(LOGGER, "Collision ahead, hold current position");
       // Keep current position
       moveit::core::RobotState current_state_command(*current_state);
@@ -152,38 +155,41 @@ ForwardTrajectory::solve(const robot_trajectory::RobotTrajectory& local_trajecto
     {
       num_iterations_stuck_ = 0;
     }
+    previously_valid_path_ = is_path_valid;
+  }
 
-    // Detect if the local solver is stuck
-    if (!prev_waypoint_target_)
+  // Detect if the local solver is stuck
+  if (!prev_waypoint_target_)
+  {
+    // Just initialize if this is the first iteration
+    prev_waypoint_target_ = robot_command.getFirstWayPointPtr();
+  }
+  // Don't perform stuck check if configured not to (like during iterations where a waypoints
+  // duration has not yet finished)
+  else if (!bypass_stuck_check)
+  {
+    if (prev_waypoint_target_->distance(*robot_command.getFirstWayPointPtr()) <= STUCK_THRESHOLD_RAD)
     {
-      // Just initialize if this is the first iteration
-      prev_waypoint_target_ = robot_command.getFirstWayPointPtr();
+      // Iterate the "stuck" counter only if the path is valid (e.g. no collision)
+      // Otherwise wait for the collision object to move.
+      if (is_path_valid)
+      {
+        ++num_iterations_stuck_;
+      }
+      if (num_iterations_stuck_ > STUCK_ITERATIONS_THRESHOLD)
+      {
+        num_iterations_stuck_ = 0;
+        prev_waypoint_target_ = nullptr;
+        feedback_result.feedback = toString(LocalFeedbackEnum::LOCAL_PLANNER_STUCK);
+        path_invalidation_event_send_ = true;  // Set feedback flag
+        RCLCPP_INFO(LOGGER, "The local planner has been stuck for several iterations. Aborting.");
+      }
     }
     else
     {
-      if (prev_waypoint_target_->distance(*robot_command.getFirstWayPointPtr()) <= STUCK_THRESHOLD_RAD)
-      {
-        // Iterate the "stuck" counter only if the path is valid (e.g. no collision)
-        // Otherwise wait for the collision object to move.
-        if (is_path_valid)
-        {
-          ++num_iterations_stuck_;
-        }
-        if (num_iterations_stuck_ > STUCK_ITERATIONS_THRESHOLD)
-        {
-          num_iterations_stuck_ = 0;
-          prev_waypoint_target_ = nullptr;
-          feedback_result.feedback = toString(LocalFeedbackEnum::LOCAL_PLANNER_STUCK);
-          path_invalidation_event_send_ = true;  // Set feedback flag
-          RCLCPP_INFO(LOGGER, "The local planner has been stuck for several iterations. Aborting.");
-        }
-      }
-      else
-      {
-        prev_waypoint_target_ = robot_command.getFirstWayPointPtr();
-      }
+      prev_waypoint_target_ = robot_command.getFirstWayPointPtr();
+      num_iterations_stuck_ = 0;
     }
-    previously_valid_path_ = is_path_valid;
   }
 
   // Transform robot trajectory into joint_trajectory message

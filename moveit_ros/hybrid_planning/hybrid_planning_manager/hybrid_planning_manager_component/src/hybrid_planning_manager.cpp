@@ -45,7 +45,7 @@ namespace moveit::hybrid_planning
 using namespace std::chrono_literals;
 
 HybridPlanningManager::HybridPlanningManager(const rclcpp::NodeOptions& options)
-  : Node("hybrid_planning_manager", options), initialized_(false), stop_hybrid_planning_(false)
+  : Node("hybrid_planning_manager", options), initialized_(false), stop_hybrid_planning_(false), clear_trajectory_(false)
 {
   // Initialize hybrid planning component after construction
   // TODO(sjahr) Remove once life cycle component nodes are available
@@ -209,6 +209,8 @@ void HybridPlanningManager::executeHybridPlannerGoal(
   // Reset the "stop" flag if it was set previously
   stop_hybrid_planning_ = false;
 
+  clear_trajectory_ = false;
+
   // Pass goal handle to class member
   hybrid_planning_goal_handle_ = std::move(goal_handle);
 
@@ -282,7 +284,10 @@ bool HybridPlanningManager::sendGlobalPlannerAction()
   global_goal_msg.motion_sequence =
       (hybrid_planning_goal_handle_->get_goal())->motion_sequence;  // latest desired motion sequence;
   global_goal_msg.planning_group = (hybrid_planning_goal_handle_->get_goal())->planning_group;
-  global_goal_msg.trajectory = hybrid_planning_goal_handle_->get_goal()->trajectory;
+  if (!clear_trajectory_)
+  {
+    global_goal_msg.trajectory = hybrid_planning_goal_handle_->get_goal()->trajectory;
+  }
 
   if (stop_hybrid_planning_)
   {
