@@ -419,8 +419,7 @@ void LocalPlannerComponent::executeIteration()
         rclcpp::Duration waypoint_duration = rclcpp::Duration(local_solution.points.at(0).time_from_start);
         // Apply latency compensation to publish a bit sooner. This compensates for ROS message latency
         // so the controller command arrives exactly when it should.
-        waypoint_duration = rclcpp::Duration(waypoint_duration.nanoseconds() +
-          rclcpp::Duration::from_seconds(config_.latency_compensation_seconds).nanoseconds());
+        waypoint_duration = waypoint_duration + rclcpp::Duration::from_seconds(config_.latency_compensation_seconds);
         time_to_send_next_wypt_ = current_time + waypoint_duration;
         prev_command_ = local_solution;
       }
