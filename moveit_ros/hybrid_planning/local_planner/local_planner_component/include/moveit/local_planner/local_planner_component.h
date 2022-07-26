@@ -123,6 +123,8 @@ public:
       declareOrGetParam<std::string>("collision_object_topic", collision_object_topic, undefined, node);
       declareOrGetParam<std::string>("joint_states_topic", joint_states_topic, undefined, node);
       declareOrGetParam<double>("latency_compensation_seconds", latency_compensation_seconds, 0.0, node);
+      declareOrGetParam<double>("collision_hold_timeout", collision_hold_timeout, 5.0, node);
+      declareOrGetParam<double>("goal_tolerance_timeout", goal_tolerance_timeout, 5.0, node);
     }
 
     std::string group_name;
@@ -142,6 +144,8 @@ public:
     std::string collision_object_topic;
     std::string joint_states_topic;
     double latency_compensation_seconds;
+    double collision_hold_timeout;
+    double goal_tolerance_timeout;
   };
 
   /** \brief Constructor */

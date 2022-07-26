@@ -47,8 +47,6 @@ namespace
 {
 const rclcpp::Logger LOGGER = rclcpp::get_logger("local_planner_component");
 const auto JOIN_THREAD_TIMEOUT = std::chrono::seconds(1);
-const double COLLISION_ABORT_TIME = 5.0; // seconds
-const double STUCK_ABORT_TIME = 5.0; // seconds
 
 // If the trajectory progress reaches more than 0.X the global goal state is considered as reached
 constexpr float PROGRESS_THRESHOLD = 0.995;
@@ -333,9 +331,9 @@ void LocalPlannerComponent::executeIteration()
           // Prevent the SimpleSampler from moving to the next waypoint, e.g. if a collision is ahead
           trajectory_operator_instance_->preventForwardProgress();
           auto time_in_collision = node_->now() - time_to_send_next_wypt_;
-          if (time_in_collision.seconds() > COLLISION_ABORT_TIME)
+          if (time_in_collision.seconds() > config_.collision_hold_timeout)
           {
-            RCLCPP_ERROR(LOGGER, "Local planner in collision state for over %f seconds. Aborting...", COLLISION_ABORT_TIME);
+            RCLCPP_ERROR(LOGGER, "Local planner in collision state for over %f seconds. Aborting...", config_.collision_hold_timeout);
             state_ = LocalPlannerState::ABORT;
             feedback_received_ = true;
           }
@@ -371,9 +369,9 @@ void LocalPlannerComponent::executeIteration()
           if (trajectory_operator_instance_->isLastWaypoint())
           {
             auto time_stuck = node_->now() - time_to_send_next_wypt_;
-            if (time_stuck.seconds() > STUCK_ABORT_TIME)
+            if (time_stuck.seconds() > config_.goal_tolerance_timeout)
             {
-              RCLCPP_ERROR(LOGGER, "Local planner in stuck state for over %f seconds at the last command. Aborting...", STUCK_ABORT_TIME);
+              RCLCPP_ERROR(LOGGER, "Local planner in stuck state for over %f seconds at the last command. Aborting...", config_.goal_tolerance_timeout);
               state_ = LocalPlannerState::ABORT;
             }
             return;
