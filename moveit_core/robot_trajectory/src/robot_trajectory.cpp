@@ -211,8 +211,12 @@ RobotTrajectory& RobotTrajectory::unwind(const moveit::core::RobotState& state)
 
     double last_value = waypoints_[0]->getJointPositions(cont_joint)[0];
     cont_joint->enforcePositionBounds(&last_value);
-    double current_value = last_value + running_offset;
-    waypoints_[0]->setJointPositions(cont_joint, &current_value);
+    if (last_value > reference_value + boost::math::constants::pi<double>())
+      running_offset -= 2.0 * boost::math::constants::pi<double>();
+    else if (last_value < reference_value - boost::math::constants::pi<double>())
+      running_offset += 2.0 * boost::math::constants::pi<double>();
+    double current_start_value = last_value + running_offset;
+    waypoints_[0]->setJointPositions(cont_joint, &current_start_value);
 
     for (std::size_t j = 1; j < waypoints_.size(); ++j)
     {
