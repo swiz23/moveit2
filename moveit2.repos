@@ -2,8 +2,8 @@ repositories:
   # TODO(andyz): remove this once a sync containing 35b93c8 happens
   moveit_msgs:
     type: git
-    url: https://github.com/mechwiz/moveit_msgs
-    version: add_new_msgs
+    url: https://github.com/swiz23/moveit_msgs
+    version: swiz/msgs_merged_fixes
   moveit_resources:
     type: git
     url: https://github.com/ros-planning/moveit_resources.git
